@@ -1,0 +1,11 @@
+{
+  "extends": [
+    "airbnb",
+    "airbnb-typescript",
+    "airbnb/hooks",
+    "plugin:react/jsx-runtime",
+  ],
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  }
+}
