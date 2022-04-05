@@ -1,5 +1,6 @@
 import axios, { AxiosPromise } from 'axios';
 import { useEffect, useState } from 'react';
+import './App.css';
 
 interface LoginData {
   name: string;
@@ -18,7 +19,7 @@ interface Post {
   from_name: string;
   id: string;
   message: string;
-  status: string;
+  type: string;
 }
 
 interface PostsData {
@@ -53,8 +54,8 @@ function fetchAllPosts() {
 
 type PostsByUserId = Record<string, Post[]>;
 
-function App() {
-  const [isAscOrder, setOrder] = useState<boolean>(true);
+function Posts() {
+  const [isAscOrder, setOrder] = useState<boolean>(false);
   const [selectedUserId, setUserId] = useState<string | null>(null);
   const [postsByUserId, setPostsByUserId] = useState<PostsByUserId>({});
 
@@ -77,68 +78,82 @@ function App() {
   }, []);
 
   const userIds = Object.keys(postsByUserId);
+  const userPosts = selectedUserId ? postsByUserId[selectedUserId] : [];
 
-  if (userIds.length > 0) {
-    const userPosts = selectedUserId ? postsByUserId[selectedUserId] : [];
-
-    return (
-      <div>
-        <ul>
-          {userIds.map((userId) => (
-            <li key={userId}>
-              <button type="button" onClick={() => setUserId(userId)}>
-                {postsByUserId[userId][0].from_name}
-                <span style={{ marginLeft: 8, background: 'lightgray' }}>
-                  {postsByUserId[userId].length}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+  return (
+    <div className="posts-container">
+      <section className="users">
+        {userIds.map((userId) => (
+          <button
+            className="user"
+            key={userId}
+            type="button"
+            onClick={() => setUserId(userId)}
+          >
+            {postsByUserId[userId][0].from_name}
+            <span>
+              {postsByUserId[userId].length}
+            </span>
+          </button>
+        ))}
+      </section>
+      <section>
         <button type="button" onClick={() => setOrder((prev) => !prev)}>
-          {isAscOrder ? 'asc' : 'desc'}
+          {isAscOrder ? 'Ascending' : 'Descending'}
         </button>
-        <ul>
-          {userPosts
-            .sort((a, b) => {
-              const timeA = new Date(a.created_time).getTime();
-              const timeB = new Date(b.created_time).getTime();
-              return isAscOrder ? timeA - timeB : timeB - timeA;
-            })
-            .map((item) => (
-              <li>
-                <div>{item.created_time}</div>
-                {item.message}
-              </li>
-            ))}
-        </ul>
-      </div>
-    );
+        {userPosts
+          .sort((a, b) => {
+            const timeA = new Date(a.created_time).getTime();
+            const timeB = new Date(b.created_time).getTime();
+            return isAscOrder ? timeA - timeB : timeB - timeA;
+          })
+          .map((item) => (
+            <article className="post">
+              <time>{new Date(item.created_time).toLocaleString()}</time>
+              {item.message}
+            </article>
+          ))}
+      </section>
+    </div>
+  );
+}
+
+function App() {
+  const [token, setToken] = useState(localStorage.getItem('token'));
+
+  useEffect(() => {
+    axios.interceptors.response.use(undefined, () => {
+      setToken(null);
+      localStorage.removeItem('token');
+    });
+  }, []);
+
+  if (token) {
+    return <Posts />;
   }
 
   return (
-    <div>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          const formData = new FormData(event.currentTarget);
-          const loginData = Object.fromEntries(formData) as unknown as LoginData;
-          registerToken(loginData).then(({ data }) => {
-            localStorage.setItem('token', data.data.sl_token);
-          });
-        }}
-      >
-        <label htmlFor="nameInput">
-          Name
-          <input name="name" id="nameInput" />
-        </label>
-        <label htmlFor="emailInput">
-          E-mail
-          <input name="email" id="emailInput" />
-        </label>
-        <button type="submit">Go</button>
-      </form>
-    </div>
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const loginData = Object.fromEntries(formData) as unknown as LoginData;
+        registerToken(loginData).then(({ data }) => {
+          localStorage.setItem('token', data.data.sl_token);
+          setToken(data.data.sl_token);
+        });
+      }}
+    >
+      <label htmlFor="nameInput">
+        Name
+        <input name="name" id="nameInput" />
+      </label>
+      <label htmlFor="emailInput">
+        E-mail
+        <input name="email" id="emailInput" />
+      </label>
+      <button type="submit">Go</button>
+    </form>
   );
 }
 
